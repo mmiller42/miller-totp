@@ -1,0 +1,7 @@
+.idea
+.vscode
+.bundle
+build/
+android/
+/coverage
+node_modules/

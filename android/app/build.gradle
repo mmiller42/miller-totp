@@ -71,13 +71,12 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 android {
     ndkVersion rootProject.ext.ndkVersion
 
-    compileSdkVersion rootProject.ext.compileSdkVersion
-
     namespace "com.millertotp"
     defaultConfig {
         applicationId "com.millertotp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        compileSdk rootProject.ext.compileSdkVersion
         versionCode 1
         versionName "1.0"
     }
@@ -104,6 +103,8 @@ android {
 }
 
 dependencies {
+    implementation fileTree(dir: "libs", includes: ["*.jar"])
+
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
@@ -118,6 +119,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    implementation("androidx.biometric:biometric:1.1.0")
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

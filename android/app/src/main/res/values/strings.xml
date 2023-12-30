@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">MillerTOTP</string>
+    <string name="app_name">
+        MillerTOTP
+    </string>
 </resources>

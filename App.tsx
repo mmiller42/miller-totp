@@ -27,34 +27,72 @@ import { SecretInput } from "./src/components/SecretInput";
 import { Section } from "./src/components/Section";
 import { Stack } from "./src/components/Stack";
 import { TextInput } from "./src/components/TextInput";
+import { AppData } from "./src/types";
+import { syncSettings, getWidgetIds } from "./src/modules/BindWidgetsModule";
+
+if (__DEV__) {
+  async function test() {
+    const METRO_PORT = 8081;
+    const WS_PORT = 4000;
+    await fetch(`http://localhost:${METRO_PORT}/async-storage`, {
+      method: "POST",
+      body: JSON.stringify({ data: {} }),
+    });
+
+    const ws = new WebSocket(`ws://localhost:${WS_PORT}`);
+    ws.onopen = () => {
+      console.log("connected to server");
+      ws.send(JSON.stringify({ data: true }));
+    };
+    ws.onclose = () => {
+      console.log("disconnected from server");
+    };
+    ws.onerror = (error) => {
+      console.error("error on client:", error);
+    };
+    ws.onmessage = (event) => {
+      console.log("received message:", event);
+    };
+  }
+
+  test().catch((e) => console.error(e));
+}
 
 const USERNAME = "secret" as const;
 
-type AppData = {
-  secret: string;
-  digits: number;
-  period: number;
-};
-
 const DEFAULT_DATA: AppData = {
-  secret: "JBSWY3DPEHPK3PXP",
+  secret: "",
   digits: 6,
   period: 30,
+  fontSize: 16,
 };
+
+const dataKeys = Object.keys(DEFAULT_DATA) as (keyof AppData & string)[];
 
 async function loadData(): Promise<AppData> {
   try {
     const result = await getGenericPassword();
-    console.log("got data:", result);
 
     if (!result || result.username !== USERNAME) {
       await saveData(DEFAULT_DATA);
       return DEFAULT_DATA;
     }
 
-    const data = JSON.parse(result.password);
+    console.log("WIDGET IDS:", await getWidgetIds());
+
+    let data = JSON.parse(result.password);
 
     if (data && typeof data === "object" && !Array.isArray(data)) {
+      if (!dataKeys.every((key) => key in data)) {
+        data = { ...DEFAULT_DATA, ...data };
+        console.warn(
+          "merging defaults, missing keys:",
+          dataKeys.filter((key) => !(key in data))
+        );
+        await saveData(data);
+      }
+
+      await syncSettings(data);
       return data as AppData;
     } else {
       console.warn("Deleting invalid data from Keychain:", data);
@@ -71,6 +109,7 @@ async function loadData(): Promise<AppData> {
 
 async function saveData(data: AppData): Promise<void> {
   const res = await setGenericPassword(USERNAME, JSON.stringify(data));
+  await syncSettings(data);
   console.log("saved data:", res);
 }
 
@@ -122,6 +161,7 @@ function App(): JSX.Element {
 
   const digitsRef = useRef<RNTextInput>(null);
   const periodRef = useRef<RNTextInput>(null);
+  const fontRef = useRef<RNTextInput>(null);
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -201,7 +241,28 @@ function App(): JSX.Element {
             </Stack>
           </Section>
           <Section title="Widget Settings">
-            <Text>WidgetS settings</Text>
+            <View>
+              <Text>Font Size</Text>
+              <TextInput
+                ref={fontRef}
+                key={String(data?.fontSize)}
+                blurOnSubmit
+                defaultValue={String(data?.fontSize ?? DEFAULT_DATA.fontSize)}
+                inputMode="numeric"
+                keyboardType="number-pad"
+                onEndEditing={(event) => {
+                  const fontSize = Number(event.nativeEvent.text);
+
+                  if (!Number.isFinite(fontSize) || fontSize <= 0) {
+                    fontRef.current?.setNativeProps({
+                      text: String(data?.fontSize ?? DEFAULT_DATA.fontSize),
+                    });
+                  } else {
+                    setData((data) => ({ ...data!, fontSize }));
+                  }
+                }}
+              />
+            </View>
           </Section>
         </View>
       </ScrollView>

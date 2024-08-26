@@ -19,9 +19,23 @@ import androidx.core.app.NotificationCompat;
 import javax.annotation.Nullable;
 
 public class ForegroundService extends Service {
+
     private static final String CHANNEL_ID = "totp_foreground_service";
+    private static TotpGenerator generator;
+    private static float fontSize = 16;
     private final int NOTIFICATION_ID;
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    public static void updateSettings(final WidgetSettings settings) {
+        generator = new TotpGenerator(settings.secret, settings.period, settings.digits);
+        fontSize = settings.fontSize;
+    }
+
+    public static TotpGenerator getGenerator() {
+        return generator;
+    }
+
+    public static float getFontSize() { return fontSize; }
 
     public ForegroundService() {
         super();
